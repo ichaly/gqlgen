@@ -8,58 +8,84 @@ import (
 
 var page = template.Must(template.New("graphiql").Parse(`<!DOCTYPE html>
 <html>
-  <head>
-    <title>{{.title}}</title>
-    <link
-		rel="stylesheet"
-		href="https://cdn.jsdelivr.net/npm/graphiql@{{.version}}/graphiql.min.css"
-		integrity="{{.cssSRI}}"
-		crossorigin="anonymous"
-	/>
-  </head>
-  <body style="margin: 0;">
-    <div id="graphiql" style="height: 100vh;"></div>
+<head>
+  <title>{{.title}}</title>
+  <style>
+      html,
+      body {
+          height: 100%;
+          margin: 0;
+          overflow: hidden;
+          width: 100%;
+      }
 
-	<script
-		src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"
-		integrity="{{.reactSRI}}"
-		crossorigin="anonymous"
-	></script>
-	<script
-		src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"
-		integrity="{{.reactDOMSRI}}"
-		crossorigin="anonymous"
-	></script>
-	<script
-		src="https://cdn.jsdelivr.net/npm/graphiql@{{.version}}/graphiql.min.js"
-		integrity="{{.jsSRI}}"
-		crossorigin="anonymous"
-	></script>
-
-    <script>
+      #graphiql {
+          height: 100vh;
+      }
+  </style>
+  <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/graphiql-with-graphiql-explorer@0.15.1/graphiqlWithExtensions.css"
+      integrity="sha256-PiHC3pxlImCsNqR79k/SieFXPFOKGNpmqqu83g1gghw="
+      crossorigin="anonymous">
+  <script
+      src="https://cdn.jsdelivr.net/npm/whatwg-fetch@2.0.3/fetch.min.js"
+      integrity="sha384-dcF7KoWRaRpjcNbVPUFgatYgAijf8DqW6NWuqLdfB5Sb4Cdbb8iHX7bHsl9YhpKa"
+      crossorigin="anonymous"
+  ></script>
+  <script
+      src="https://cdn.jsdelivr.net/npm/react@16.8.6/umd/react.production.min.js"
+      integrity="sha384-qn+ML/QkkJxqn4LLs1zjaKxlTg2Bl/6yU/xBTJAgxkmNGc6kMZyeskAG0a7eJBR1"
+      crossorigin="anonymous"
+  ></script>
+  <script
+      src="https://cdn.jsdelivr.net/npm/react-dom@16.8.6/umd/react-dom.production.min.js"
+      integrity="sha384-85IMG5rvmoDsmMeWK/qUU4kwnYXVpC+o9hoHMLi4bpNR+gMEiPLrvkZCgsr7WWgV"
+      crossorigin="anonymous"
+  ></script>
+  <script
+      src="https://cdn.jsdelivr.net/npm/graphiql-with-graphiql-explorer@0.15.1/graphiqlWithExtensions.min.js"
+      integrity="sha256-4+5xt0s1fmQi6n064zU/ZDcCvgroBNF/kWNYVdiTNPg="
+      crossorigin="anonymous"
+  ></script>
+</head>
+<body>
+<div id="graphiql"></div>
+<script>
 {{- if .endpointIsAbsolute}}
-      const url = {{.endpoint}};
-      const subscriptionUrl = {{.subscriptionEndpoint}};
+  var fetchURL = {{.endpoint}};
 {{- else}}
-      const url = location.protocol + '//' + location.host + {{.endpoint}};
-      const wsProto = location.protocol == 'https:' ? 'wss:' : 'ws:';
-      const subscriptionUrl = wsProto + '//' + location.host + {{.endpoint}};
+  var fetchURL = location.protocol + '//' + location.host + {{.endpoint}};
 {{- end}}
+  function graphQLFetcher (graphQLParams) {
+    var headers = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    }
+    return fetch(fetchURL, {
+      method: 'post',
+      headers: headers,
+      body: JSON.stringify(graphQLParams)
+    }).then(function (response) {
+      return response.text()
+    }).then(function (responseBody) {
+      try {
+        return JSON.parse(responseBody)
+      } catch (error) {
+        return responseBody
+      }
+    })
+  }
 
-      const fetcher = GraphiQL.createFetcher({ url, subscriptionUrl });
-      ReactDOM.render(
-        React.createElement(GraphiQL, {
-          fetcher: fetcher,
-          tabs: true,
-          headerEditorEnabled: true,
-          shouldPersistHeaders: true
-        }),
-        document.getElementById('graphiql'),
-      );
-    </script>
-  </body>
-</html>
-`))
+  ReactDOM.render(
+    React.createElement(GraphiQLWithExtensions.GraphiQLWithExtensions, {
+      fetcher: graphQLFetcher
+    }),
+    document.getElementById('graphiql')
+  )
+</script>
+</body>
+</html>`))
 
 // Handler responsible for setting up the playground
 func Handler(title string, endpoint string) http.HandlerFunc {
