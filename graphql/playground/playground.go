@@ -6,84 +6,58 @@ import (
 	"net/url"
 )
 
-var page = template.Must(template.New("graphiql").Parse(`<!DOCTYPE html>
+var page = template.Must(template.New("graphiql").Parse(`<!doctype html>
 <html>
 <head>
+  <meta charset="utf-8">
   <title>{{.title}}</title>
-  <style>
-      html,
-      body {
-          height: 100%;
-          margin: 0;
-          overflow: hidden;
-          width: 100%;
-      }
-
-      #graphiql {
-          height: 100vh;
-      }
-  </style>
-  <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/graphiql-with-graphiql-explorer@0.15.1/graphiqlWithExtensions.css"
-      integrity="sha256-PiHC3pxlImCsNqR79k/SieFXPFOKGNpmqqu83g1gghw="
-      crossorigin="anonymous">
-  <script
-      src="https://cdn.jsdelivr.net/npm/whatwg-fetch@2.0.3/fetch.min.js"
-      integrity="sha384-dcF7KoWRaRpjcNbVPUFgatYgAijf8DqW6NWuqLdfB5Sb4Cdbb8iHX7bHsl9YhpKa"
-      crossorigin="anonymous"
-  ></script>
-  <script
-      src="https://cdn.jsdelivr.net/npm/react@16.8.6/umd/react.production.min.js"
-      integrity="sha384-qn+ML/QkkJxqn4LLs1zjaKxlTg2Bl/6yU/xBTJAgxkmNGc6kMZyeskAG0a7eJBR1"
-      crossorigin="anonymous"
-  ></script>
-  <script
-      src="https://cdn.jsdelivr.net/npm/react-dom@16.8.6/umd/react-dom.production.min.js"
-      integrity="sha384-85IMG5rvmoDsmMeWK/qUU4kwnYXVpC+o9hoHMLi4bpNR+gMEiPLrvkZCgsr7WWgV"
-      crossorigin="anonymous"
-  ></script>
-  <script
-      src="https://cdn.jsdelivr.net/npm/graphiql-with-graphiql-explorer@0.15.1/graphiqlWithExtensions.min.js"
-      integrity="sha256-4+5xt0s1fmQi6n064zU/ZDcCvgroBNF/kWNYVdiTNPg="
-      crossorigin="anonymous"
-  ></script>
+  <base href="//cdn.jsdelivr.net/npm/altair-static@{{.version}}/build/dist/">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="styles.css" rel="stylesheet" />
 </head>
 <body>
-<div id="graphiql"></div>
-<script>
-{{- if .endpointIsAbsolute}}
-  var fetchURL = {{.endpoint}};
-{{- else}}
-  var fetchURL = location.protocol + '//' + location.host + {{.endpoint}};
-{{- end}}
-  function graphQLFetcher (graphQLParams) {
-    var headers = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    }
-    return fetch(fetchURL, {
-      method: 'post',
-      headers: headers,
-      body: JSON.stringify(graphQLParams)
-    }).then(function (response) {
-      return response.text()
-    }).then(function (responseBody) {
-      try {
-        return JSON.parse(responseBody)
-      } catch (error) {
-        return responseBody
+  <app-root>
+    <style>
+      .loading-screen {
+        display: none;
       }
-    })
-  }
-
-  ReactDOM.render(
-    React.createElement(GraphiQLWithExtensions.GraphiQLWithExtensions, {
-      fetcher: graphQLFetcher
-    }),
-    document.getElementById('graphiql')
-  )
-</script>
+    </style>
+    <div class="loading-screen styled">
+      <div class="loading-screen-inner">
+        <div class="loading-screen-logo-container">
+          <img src="assets/img/logo_350.svg" alt="Altair">
+        </div>
+        <div class="loading-screen-loading-indicator">
+          <span class="loading-indicator-dot"></span>
+          <span class="loading-indicator-dot"></span>
+          <span class="loading-indicator-dot"></span>
+        </div>
+      </div>
+    </div>
+  </app-root>
+  <script rel="preload" as="script" type="text/javascript" src="runtime.js"></script>
+  <script rel="preload" as="script" type="text/javascript" src="polyfills.js"></script>
+  <script rel="preload" as="script" type="text/javascript" src="main.js"></script>
+  <script>
+{{- if .endpointIsAbsolute}}
+    const url = {{.endpoint}};
+    const subscriptionUrl = {{.subscriptionEndpoint}};
+{{- else}}
+    const url = location.protocol + '//' + location.host + {{.endpoint}};
+    const wsProto = location.protocol == 'https:' ? 'wss:' : 'ws:';
+    const subscriptionUrl = wsProto + '//' + location.host + {{.endpoint}};
+{{- end}}
+    var altairOptions = {
+      endpointURL: url,
+      subscriptionsEndpoint: subscriptionUrl,
+      initialHeaders:{},
+      initialVariables:'{}'
+    };
+    window.addEventListener("load", function() {
+      AltairGraphQL.init(altairOptions);
+    });
+  </script>
 </body>
 </html>`))
 
@@ -96,11 +70,7 @@ func Handler(title string, endpoint string) http.HandlerFunc {
 			"endpoint":             endpoint,
 			"endpointIsAbsolute":   endpointHasScheme(endpoint),
 			"subscriptionEndpoint": getSubscriptionEndpoint(endpoint),
-			"version":              "1.8.2",
-			"cssSRI":               "sha256-CDHiHbYkDSUc3+DS2TU89I9e2W3sJRUOqSmp7JC+LBw=",
-			"jsSRI":                "sha256-X8vqrqZ6Rvvoq4tvRVM3LoMZCQH8jwW92tnX0iPiHPc=",
-			"reactSRI":             "sha256-Ipu/TQ50iCCVZBUsZyNJfxrDk0E2yhaEIz0vqI+kFG8=",
-			"reactDOMSRI":          "sha256-nbMykgB6tsOFJ7OdVmPpdqMFVk4ZsqWocT6issAPUF0=",
+			"version":              "4.4.2",
 		})
 		if err != nil {
 			panic(err)
